@@ -1,0 +1,42 @@
+[
+  {
+    "id": "1",
+    "type": "memory",
+    "title": "Eerste ontmoeting",
+    "content": "De dag dat we begonnen met het Second Brain project.",
+    "tags": ["project", "start"],
+    "createdAt": "2026-06-01T21:00:00Z",
+    "updatedAt": "2026-06-01T21:00:00Z"
+  },
+  {
+    "id": "2",
+    "type": "note",
+    "title": "Project ideeën",
+    "content": "We willen een systeem dat al onze notities, gesprekken en herinneringen bewaart.",
+    "category": "planning",
+    "createdAt": "2026-06-02T10:00:00Z",
+    "updatedAt": "2026-06-02T10:00:00Z"
+  },
+  {
+    "id": "3",
+    "type": "conversation",
+    "title": "Eerste gesprek",
+    "participants": ["Hans", "Dorus"],
+    "messages": [
+      {
+        "id": "m1",
+        "role": "user",
+        "content": "Hallo Dorus, hoe gaat het?",
+        "timestamp": "2026-06-01T20:00:00Z"
+      },
+      {
+        "id": "m2",
+        "role": "assistant",
+        "content": "Hallo! Ik ben klaar om te helpen.",
+        "timestamp": "2026-06-01T20:01:00Z"
+      }
+    ],
+    "createdAt": "2026-06-01T20:00:00Z",
+    "updatedAt": "2026-06-01T20:01:00Z"
+  }
+]
