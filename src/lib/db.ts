@@ -110,6 +110,36 @@ export function addItem(item: BrainItem): BrainItem {
   return item;
 }
 
+
+export function updateItem(id: string, updates: Partial<BrainItem>): BrainItem | undefined {
+  const existing = getItemById(id);
+  if (!existing) return undefined;
+  const merged = { ...existing, ...updates, updatedAt: new Date().toISOString() } as BrainItem;
+  const stmt = db.prepare(`
+    UPDATE items SET
+      type = ?, title = ?, content = ?, tags = ?,
+      category = ?, participants = ?, messages = ?, updatedAt = ?
+    WHERE id = ?
+  `);
+  stmt.run(
+    merged.type,
+    merged.title,
+    'content' in merged ? merged.content : null,
+    'tags' in merged ? JSON.stringify(merged.tags) : null,
+    'category' in merged ? merged.category : null,
+    'participants' in merged ? JSON.stringify(merged.participants) : null,
+    'messages' in merged ? JSON.stringify(merged.messages) : null,
+    merged.updatedAt,
+    id
+  );
+  return merged;
+}
+
+export function deleteItem(id: string): boolean {
+  const res = db.prepare('DELETE FROM items WHERE id = ?').run(id);
+  return res.changes > 0;
+}
+
 export function getSetting(key: string): string | undefined {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as any;
   return row?.value;
