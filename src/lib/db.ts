@@ -121,3 +121,40 @@ export function setSetting(key: string, value: string) {
 
 initDb();
 export default db;
+
+
+export function seedIfEmpty() {
+  const count = (db.prepare('SELECT COUNT(*) as c FROM items').get() as any).c;
+  if (count > 0) return;
+  // Eerste run: laad demo-data uit public/data/items.json
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const jsonPath = path.join(process.cwd(), 'public', 'data', 'items.json');
+    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as any[];
+    const insert = db.prepare(
+      `INSERT OR IGNORE INTO items (id, type, title, content, tags, category, participants, messages, createdAt, updatedAt)
+       VALUES (@id, @type, @title, @content, @tags, @category, @participants, @messages, @createdAt, @updatedAt)`
+    );
+    const tx = db.transaction((rows: any[]) => {
+      for (const r of rows) {
+        insert.run({
+          id: r.id,
+          type: r.type,
+          title: r.title,
+          content: r.content ?? null,
+          tags: r.tags ? JSON.stringify(r.tags) : null,
+          category: r.category ?? null,
+          participants: r.participants ? JSON.stringify(r.participants) : null,
+          messages: r.messages ? JSON.stringify(r.messages) : null,
+          createdAt: r.createdAt ?? new Date().toISOString(),
+          updatedAt: r.updatedAt ?? new Date().toISOString(),
+        });
+      }
+    });
+    tx(raw);
+    console.log(`[db] seeded ${raw.length} demo items`);
+  } catch (e) {
+    console.error('[db] seed failed', e);
+  }
+}
