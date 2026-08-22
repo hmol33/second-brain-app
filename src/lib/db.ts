@@ -1,6 +1,29 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import fs from 'fs';
+import path from 'path';
+
 import Database from 'better-sqlite3';
 import { BrainItem } from './types';
+
+type ItemRow = {
+  id: string;
+  type: BrainItem['type'];
+  title: string;
+  content: string | null;
+  tags: string | null;
+  category: string | null;
+  participants: string | null;
+  messages: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function rowToItem(row: ItemRow): BrainItem {
+  const item: Record<string, unknown> = { ...row };
+  if (row.tags) item.tags = JSON.parse(row.tags);
+  if (row.messages) item.messages = JSON.parse(row.messages);
+  delete item.tags_raw;
+  return item as unknown as BrainItem;
+}
 
 const db = new Database('./second-brain.db');
 
@@ -29,21 +52,14 @@ export function initDb() {
 }
 
 export function getAllItems(): BrainItem[] {
-  const rows = db.prepare('SELECT * FROM items ORDER BY createdAt DESC').all() as any[];
-  return rows.map(row => {
-    const item: any = { ...row };
-    if (row.tags) item.tags = JSON.parse(row.tags);
-    if (row.messages) item.messages = JSON.parse(row.messages);
-    return item;
-  });
+  const rows = db.prepare('SELECT * FROM items ORDER BY createdAt DESC').all() as ItemRow[];
+  return rows.map(rowToItem);
 }
 
 export function getItemById(id: string): BrainItem | undefined {
-  const row = db.prepare('SELECT * FROM items WHERE id = ?').get(id) as any;
+  const row = db.prepare('SELECT * FROM items WHERE id = ?').get(id) as ItemRow | undefined;
   if (!row) return undefined;
-  if (row.tags) row.tags = JSON.parse(row.tags);
-  if (row.messages) row.messages = JSON.parse(row.messages);
-  return row;
+  return rowToItem(row);
 }
 
 export function searchItems(query: string): BrainItem[] {
@@ -52,18 +68,13 @@ export function searchItems(query: string): BrainItem[] {
     SELECT * FROM items 
     WHERE title LIKE ? OR content LIKE ?
     ORDER BY createdAt DESC
-  `).all(q, q) as any[];
-  return rows.map(row => {
-    const item: any = { ...row };
-    if (row.tags) item.tags = JSON.parse(row.tags);
-    if (row.messages) item.messages = JSON.parse(row.messages);
-    return item;
-  });
+  `).all(q, q) as ItemRow[];
+  return rows.map(rowToItem);
 }
 
 export function filterItems(type?: string, dateFrom?: string, dateTo?: string): BrainItem[] {
   let sql = 'SELECT * FROM items WHERE 1=1';
-  const params: any[] = [];
+  const params: (string | null)[] = [];
   
   if (type) {
     sql += ' AND type = ?';
@@ -79,13 +90,8 @@ export function filterItems(type?: string, dateFrom?: string, dateTo?: string): 
   }
   
   sql += ' ORDER BY createdAt DESC';
-  const rows = db.prepare(sql).all(...params) as any[];
-  return rows.map(row => {
-    const item: any = { ...row };
-    if (row.tags) item.tags = JSON.parse(row.tags);
-    if (row.messages) item.messages = JSON.parse(row.messages);
-    return item;
-  });
+  const rows = db.prepare(sql).all(...params) as ItemRow[];
+  return rows.map(rowToItem);
 }
 
 export function addItem(item: BrainItem): BrainItem {
@@ -141,7 +147,7 @@ export function deleteItem(id: string): boolean {
 }
 
 export function getSetting(key: string): string | undefined {
-  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as any;
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
   return row?.value;
 }
 
@@ -154,19 +160,18 @@ export default db;
 
 
 export function seedIfEmpty() {
-  const count = (db.prepare('SELECT COUNT(*) as c FROM items').get() as any).c;
+  const count = (db.prepare('SELECT COUNT(*) as c FROM items').get() as { c: number }).c;
   if (count > 0) return;
   // Eerste run: laad demo-data uit public/data/items.json
+  type RawItem = Record<string, unknown>;
   try {
-    const fs = require('fs');
-    const path = require('path');
     const jsonPath = path.join(process.cwd(), 'public', 'data', 'items.json');
-    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as any[];
+    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as RawItem[];
     const insert = db.prepare(
       `INSERT OR IGNORE INTO items (id, type, title, content, tags, category, participants, messages, createdAt, updatedAt)
        VALUES (@id, @type, @title, @content, @tags, @category, @participants, @messages, @createdAt, @updatedAt)`
     );
-    const tx = db.transaction((rows: any[]) => {
+    const tx = db.transaction((rows: RawItem[]) => {
       for (const r of rows) {
         insert.run({
           id: r.id,
