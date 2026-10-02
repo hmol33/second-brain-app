@@ -21,7 +21,6 @@ function rowToItem(row: ItemRow): BrainItem {
   const item: Record<string, unknown> = { ...row };
   if (row.tags) item.tags = JSON.parse(row.tags);
   if (row.messages) item.messages = JSON.parse(row.messages);
-  delete item.tags_raw;
   return item as unknown as BrainItem;
 }
 
